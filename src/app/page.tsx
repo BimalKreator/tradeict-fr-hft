@@ -58,7 +58,9 @@ export default function Home() {
       const res = await fetch("/api/screener?limit=20");
       if (!res.ok) throw new Error("Failed to load screener");
       const json = await res.json();
-      setData({ rows: json.rows ?? [], total: json.total ?? 0 });
+      const data = Array.isArray(json.data) ? json.data : [];
+      console.log("Frontend received:", data);
+      setData({ rows: data, total: data.length });
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error loading data");

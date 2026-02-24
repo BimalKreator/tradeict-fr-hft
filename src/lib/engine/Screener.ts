@@ -8,7 +8,7 @@ import type {
   FundingPeriodLabel,
   ScreenerRow,
 } from "@/lib/types";
-import { setScreenerRow, ESTIMATED_FEE_BPS } from "./screener-store";
+import { setScreenerRow, getScreenerRows, ESTIMATED_FEE_BPS } from "./screener-store";
 
 /** In-memory cache of latest funding + mark per exchange/symbol for screener input */
 const payloadCache = new Map<string, FundingMarkPayload>();
@@ -138,6 +138,21 @@ export class Screener {
       };
       this.listener?.(opportunity);
     }
+  }
+
+  /**
+   * Returns top screener rows (both exchanges have data), sorted by net spread.
+   * Used by GET /api/screener to ensure we read from the same instance that receives WS data.
+   */
+  getTopOpportunities(limit = 20, minSpreadBps?: number): ScreenerRow[] {
+    let rows = getScreenerRows();
+    if (minSpreadBps != null && Number.isFinite(minSpreadBps)) {
+      rows = rows.filter((r) => Math.abs(r.netSpreadBps) >= minSpreadBps);
+    }
+    rows = [...rows].sort((a, b) => b.netSpreadBps - a.netSpreadBps);
+    const result = rows.slice(0, limit);
+    console.log("Screener returning opportunities:", result.length);
+    return result;
   }
 
   getConfig(): ScreenerConfig {

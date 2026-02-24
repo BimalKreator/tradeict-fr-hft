@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BotController } from "@/lib/engine/BotController";
-import { getScreenerRows } from "@/lib/engine/screener-store"; // reads from globalThis store
 
+const SCREENER_KEY = "__SCREENER__";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
   try {
-    const controller = BotController.getInstance(); // globalThis singleton
+    const controller = BotController.getInstance();
     if (!controller.isInitialized()) {
       controller.init();
     }
-    // Rows from globalThis store (same instance Screener writes to)
+
+    const screener = (globalThis as Record<string, unknown>)[SCREENER_KEY] as
+      | { getTopOpportunities: (limit: number, minSpreadBps?: number) => unknown[] }
+      | undefined;
 
     const { searchParams } = new URL(request.url);
     const minSpreadBps = searchParams.get("minSpreadBps");
@@ -24,19 +27,12 @@ export async function GET(request: NextRequest) {
       MAX_LIMIT
     );
 
-    let rows = getScreenerRows();
+    const opportunities =
+      screener && typeof screener.getTopOpportunities === "function"
+        ? screener.getTopOpportunities(limit, minBps)
+        : [];
 
-    if (minBps != null && Number.isFinite(minBps)) {
-      rows = rows.filter((r) => Math.abs(r.netSpreadBps) >= minBps);
-    }
-
-    rows = [...rows].sort((a, b) => b.netSpreadBps - a.netSpreadBps);
-    const paginated = rows.slice(0, limit);
-
-    return NextResponse.json({
-      rows: paginated,
-      total: rows.length,
-    });
+    return NextResponse.json({ data: opportunities });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Screener failed" },
