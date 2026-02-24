@@ -91,12 +91,15 @@ export class BotController {
   /** Connect WS and subscribe to all screener symbols for both exchanges. Idempotent. */
   init(): void {
     if (this.initialized) return;
+    console.log("--- BOT ENGINE STARTING ---");
     this.initialized = true;
     this.wsManager.connect(["binance", "bybit"]);
+    console.log("Subscribing to pairs...");
     for (const symbol of SCREENER_SYMBOLS) {
       this.wsManager.subscribe("binance", symbol);
       this.wsManager.subscribe("bybit", symbol);
     }
+    console.log(`Subscribed to ${SCREENER_SYMBOLS.length} pairs on Binance and Bybit.`);
   }
 
   isInitialized(): boolean {

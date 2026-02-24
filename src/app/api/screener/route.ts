@@ -8,7 +8,10 @@ const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
   try {
-    BotController.getInstance().init();
+    const controller = BotController.getInstance();
+    if (!controller.isInitialized()) {
+      controller.init();
+    }
 
     const { searchParams } = new URL(request.url);
     const minSpreadBps = searchParams.get("minSpreadBps");

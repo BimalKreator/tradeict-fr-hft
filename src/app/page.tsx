@@ -53,7 +53,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchScreener = async () => {
+  const fetchScreener = async (isBackgroundRefresh = false) => {
     try {
       const res = await fetch("/api/screener?limit=20");
       if (!res.ok) throw new Error("Failed to load screener");
@@ -63,19 +63,19 @@ export default function Home() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error loading data");
     } finally {
-      setLoading(false);
+      if (!isBackgroundRefresh) setLoading(false);
       setRefreshing(false);
     }
   };
 
   const handleForceRefresh = () => {
     setRefreshing(true);
-    fetchScreener();
+    fetchScreener(false);
   };
 
   useEffect(() => {
-    fetchScreener();
-    const interval = setInterval(fetchScreener, 5000);
+    fetchScreener(false);
+    const interval = setInterval(() => fetchScreener(true), 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -86,7 +86,7 @@ export default function Home() {
           <div>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Funding screener</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Top 20 pairs by net spread (Binance − Bybit). Updates every 5s.
+              Top 20 pairs by net spread (Binance − Bybit). Updates every 3s.
             </p>
           </div>
           <button
