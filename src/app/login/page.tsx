@@ -1,21 +1,23 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/Toaster";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    e.stopPropagation();
     if (loading) return;
+    setError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -25,18 +27,18 @@ function LoginForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        addToast({
-          type: "error",
-          message: (data.error as string) || "Login failed",
-        });
+        const message = (data.error as string) || "Login failed";
+        setError(message);
+        addToast({ type: "error", message });
         setLoading(false);
         return;
       }
       addToast({ type: "success", message: "Logged in" });
-      router.push(from);
-      router.refresh();
+      window.location.href = from || "/";
     } catch {
-      addToast({ type: "error", message: "Something went wrong" });
+      const message = "Something went wrong";
+      setError(message);
+      addToast({ type: "error", message });
       setLoading(false);
     }
   }
@@ -47,7 +49,16 @@ function LoginForm() {
         <h1 className="mb-6 text-center text-xl font-semibold text-[var(--foreground)]">
           Admin login
         </h1>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+          noValidate
+        >
+          {error && (
+            <p className="rounded-lg border border-[var(--loss)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--loss)]" role="alert">
+              {error}
+            </p>
+          )}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-[var(--muted)]">Email</span>
             <input
@@ -57,7 +68,8 @@ function LoginForm() {
               placeholder="admin@example.com"
               autoComplete="email"
               required
-              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+              disabled={loading}
+              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-70"
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -69,7 +81,8 @@ function LoginForm() {
               placeholder="••••••••"
               autoComplete="current-password"
               required
-              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+              disabled={loading}
+              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-70"
             />
           </label>
           <button
