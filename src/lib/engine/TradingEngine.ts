@@ -33,11 +33,28 @@ export type TradingEngineConfig = {
 export type TradingEngineListener = {
   onEntryDecision?: (decision: EntryDecision) => void;
   onExitSignal?: (signal: ExitSignal) => void;
+  /** Fired when auto-trade is paused due to Runtime Safety Rule. */
+  onAutoTradePaused?: (reason: string) => void;
+};
+
+/**
+ * Runtime Safety Rule: Auto-trade is strictly disabled/paused when
+ * - both exchanges are not connected, or
+ * - balances cannot be fetched, or
+ * - Hedge Mode is not confirmed.
+ * Listen to WsManager onDisconnect to instantly pause.
+ */
+export type RuntimeSafetyState = {
+  connectionOk: boolean;
+  balancesOk: boolean;
+  hedgeConfirmed: boolean;
+  autoTradeEnabled: boolean;
 };
 
 /**
  * TradingEngine: entry/exit logic. Consumes opportunities from Screener,
  * produces EntryDecision for OrderManager; consumes ExitSignal from Monitor to close.
+ * Enforces Runtime Safety Rule before opening any new position.
  */
 export class TradingEngine {
   private config: TradingEngineConfig;
@@ -45,6 +62,12 @@ export class TradingEngine {
   private monitor: Monitor | null = null;
   private listener: TradingEngineListener = {};
   private openCount = 0;
+  private runtime: RuntimeSafetyState = {
+    connectionOk: false,
+    balancesOk: false,
+    hedgeConfirmed: false,
+    autoTradeEnabled: false,
+  };
 
   constructor(config: TradingEngineConfig) {
     this.config = config;
@@ -62,8 +85,46 @@ export class TradingEngine {
     this.listener = listener;
   }
 
+  /** Call when WsManager fires onDisconnect to instantly pause auto-trade. */
+  onWsDisconnect(): void {
+    if (this.runtime.connectionOk) {
+      this.runtime.connectionOk = false;
+      this.listener.onAutoTradePaused?.("Exchange disconnected");
+    }
+  }
+
+  setConnectionOk(ok: boolean): void {
+    this.runtime.connectionOk = ok;
+  }
+
+  setBalancesOk(ok: boolean): void {
+    this.runtime.balancesOk = ok;
+  }
+
+  setHedgeConfirmed(ok: boolean): void {
+    this.runtime.hedgeConfirmed = ok;
+  }
+
+  setAutoTradeEnabled(ok: boolean): void {
+    this.runtime.autoTradeEnabled = ok;
+  }
+
+  getRuntimeState(): Readonly<RuntimeSafetyState> {
+    return { ...this.runtime };
+  }
+
+  canAutoTrade(): boolean {
+    return (
+      this.runtime.autoTradeEnabled &&
+      this.runtime.connectionOk &&
+      this.runtime.balancesOk &&
+      this.runtime.hedgeConfirmed
+    );
+  }
+
   /** Called by Screener when an opportunity is found. */
   onOpportunity(opportunity: FundingArbOpportunity): void {
+    if (!this.canAutoTrade()) return;
     if (this.openCount >= this.config.maxOpenOpportunities) return;
     const decision: EntryDecision = {
       opportunity,

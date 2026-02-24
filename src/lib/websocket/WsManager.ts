@@ -12,6 +12,8 @@ export type WsManagerListener = {
   onMarkPrice?: (data: MarkPriceUpdate) => void;
   onPosition?: (data: UserPositionUpdate) => void;
   onError?: (exchange: ExchangeId, err: Error) => void;
+  /** Fired when any exchange WS disconnects. Use to pause auto-trade (Runtime Safety Rule). */
+  onDisconnect?: (exchange: ExchangeId) => void;
 };
 
 /**
@@ -55,14 +57,18 @@ export class WsManager {
       onMarkPrice: (d) => this.safeForward("binance", this.listener.onMarkPrice, d),
       onPosition: (d) => this.safeForward("binance", this.listener.onPosition, d),
       onError: (err) => this.safeError("binance", err),
-      onClose: () => {},
+      onClose: () => {
+        try { this.listener.onDisconnect?.("binance"); } catch { /* no-op */ }
+      },
     });
     this.bybit.setListener({
       onFundingRate: (d) => this.safeForward("bybit", this.listener.onFundingRate, d),
       onMarkPrice: (d) => this.safeForward("bybit", this.listener.onMarkPrice, d),
       onPosition: (d) => this.safeForward("bybit", this.listener.onPosition, d),
       onError: (err) => this.safeError("bybit", err),
-      onClose: () => {},
+      onClose: () => {
+        try { this.listener.onDisconnect?.("bybit"); } catch { /* no-op */ }
+      },
     });
   }
 
