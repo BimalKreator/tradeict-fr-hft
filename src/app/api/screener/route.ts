@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BotController } from "@/lib/engine/BotController";
+import { getScreenerRowsFromFile } from "@/lib/engine/screener-store";
+import type { ScreenerRow } from "@/lib/types";
 
 const SCREENER_KEY = "__SCREENER__";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+
+function applyFilterSortLimit(
+  rows: ScreenerRow[],
+  limit: number,
+  minSpreadBps?: number
+): ScreenerRow[] {
+  let out = rows;
+  if (minSpreadBps != null && Number.isFinite(minSpreadBps)) {
+    out = out.filter((r) => Math.abs(r.netSpreadBps) >= minSpreadBps);
+  }
+  out = [...out].sort((a, b) => b.netSpreadBps - a.netSpreadBps);
+  return out.slice(0, limit);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,10 +27,6 @@ export async function GET(request: NextRequest) {
     if (!controller.isInitialized()) {
       controller.init();
     }
-
-    const screener = (globalThis as Record<string, unknown>)[SCREENER_KEY] as
-      | { getTopOpportunities: (limit: number, minSpreadBps?: number) => unknown[] }
-      | undefined;
 
     const { searchParams } = new URL(request.url);
     const minSpreadBps = searchParams.get("minSpreadBps");
@@ -27,10 +38,19 @@ export async function GET(request: NextRequest) {
       MAX_LIMIT
     );
 
-    const opportunities =
+    const screener = (globalThis as Record<string, unknown>)[SCREENER_KEY] as
+      | { getTopOpportunities: (limit: number, minSpreadBps?: number) => ScreenerRow[] }
+      | undefined;
+
+    let opportunities: ScreenerRow[] =
       screener && typeof screener.getTopOpportunities === "function"
         ? screener.getTopOpportunities(limit, minBps)
         : [];
+
+    if (opportunities.length === 0) {
+      const fileRows = await getScreenerRowsFromFile();
+      opportunities = applyFilterSortLimit(fileRows, limit, minBps);
+    }
 
     return NextResponse.json({ data: opportunities });
   } catch (e) {
