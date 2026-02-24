@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       MAX_LIMIT
     );
 
+    // Same process as custom server (server.js): BotController and Screener live on globalThis.
     const screener = (globalThis as Record<string, unknown>)[SCREENER_KEY] as
       | { getTopOpportunities: (limit: number, minSpreadBps?: number) => ScreenerRow[] }
       | undefined;
