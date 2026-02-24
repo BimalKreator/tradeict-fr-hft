@@ -14,9 +14,13 @@ export type StoredKeys = {
 };
 
 function getEncryptionSecret(): string {
-  const secret = process.env.KEYS_ENCRYPTION_SECRET;
+  const raw = process.env.KEYS_ENCRYPTION_SECRET;
+  const secret = typeof raw === "string" ? raw.trim() : "";
   if (!secret || secret.length < 16) {
-    throw new Error("KEYS_ENCRYPTION_SECRET must be set in .env.local (min 16 chars)");
+    throw new Error(
+      "KEYS_ENCRYPTION_SECRET must be set in .env.local (min 16 chars). " +
+        "Add it from .env.local.example and restart the server."
+    );
   }
   return secret;
 }

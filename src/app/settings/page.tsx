@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useToast } from "@/components/ui/Toaster";
 
+/** API keys: client-side fetch only to /api/keys/test and /api/keys/save. No Server Actions. */
+
 type TestResult = {
   ok: boolean;
   binance?: { error?: string; warning?: string; hedgeMode?: boolean };
