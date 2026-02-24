@@ -138,3 +138,22 @@ export interface CapitalConfig {
   /** Default capital percentage per trade (0–100). Overridable per getAllocation call. */
   capitalPercentage: number;
 }
+
+/** Funding interval in hours (e.g. 8 or 4). */
+export type FundingIntervalHours = 4 | 8;
+
+/** Period label for displayed rate: Active = current period, Next = predicted next. */
+export type FundingPeriodLabel = "Active" | "Next";
+
+/** Single row for screener API: both exchanges have data, spreads computed. */
+export interface ScreenerRow {
+  symbol: string;
+  binanceRate: number;
+  bybitRate: number;
+  grossSpreadBps: number;
+  netSpreadBps: number;
+  periodLabel: FundingPeriodLabel;
+  intervalHours: FundingIntervalHours;
+  nextFundingTime: number;
+  updatedAt: number;
+}
