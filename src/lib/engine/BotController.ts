@@ -2,6 +2,9 @@ import type { ExchangeId } from "@/lib/types";
 import { WsManager } from "@/lib/websocket/WsManager";
 import { Screener } from "./Screener";
 
+const BOT_CONTROLLER_KEY = "__BOT_CONTROLLER__";
+const SCREENER_KEY = "__SCREENER__";
+
 /** Top 50 USDT-perpetual pairs for funding screener (Binance + Bybit). */
 export const SCREENER_SYMBOLS: string[] = [
   "BTCUSDT",
@@ -55,12 +58,10 @@ export const SCREENER_SYMBOLS: string[] = [
   "DYDXUSDT",
 ];
 
-let instance: BotController | null = null;
-
 /**
- * Singleton that wires WsManager and Screener: on first /api/screener (or startup),
- * connects to Binance and Bybit and subscribes to SCREENER_SYMBOLS so the screener
- * store is populated for the API to read.
+ * Singleton on globalThis so API route and any background context share the same
+ * instance. Wires WsManager and Screener; on first /api/screener, connects and
+ * subscribes to SCREENER_SYMBOLS so the screener store is populated.
  */
 export class BotController {
   private wsManager: WsManager;
@@ -68,7 +69,7 @@ export class BotController {
   private initialized = false;
 
   private constructor() {
-    this.wsManager = new WsManager();
+    this.wsManager = WsManager.getInstance();
     this.screener = new Screener({
       minSpreadBps: 0,
       symbols: SCREENER_SYMBOLS,
@@ -79,13 +80,13 @@ export class BotController {
       onFundingRate: (data) => this.screener.onFundingRate(data),
       onMarkPrice: (data) => this.screener.onMarkPrice(data),
     });
+    (globalThis as Record<string, unknown>)[SCREENER_KEY] = this.screener;
   }
 
   static getInstance(): BotController {
-    if (instance == null) {
-      instance = new BotController();
-    }
-    return instance;
+    const g = globalThis as Record<string, unknown>;
+    if (!g[BOT_CONTROLLER_KEY]) g[BOT_CONTROLLER_KEY] = new BotController();
+    return g[BOT_CONTROLLER_KEY] as BotController;
   }
 
   /** Connect WS and subscribe to all screener symbols for both exchanges. Idempotent. */

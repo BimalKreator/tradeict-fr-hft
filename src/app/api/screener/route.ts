@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BotController } from "@/lib/engine/BotController";
-import { getScreenerRows } from "@/lib/engine/screener-store";
+import { getScreenerRows } from "@/lib/engine/screener-store"; // reads from globalThis store
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
   try {
-    const controller = BotController.getInstance();
+    const controller = BotController.getInstance(); // globalThis singleton
     if (!controller.isInitialized()) {
       controller.init();
     }
+    // Rows from globalThis store (same instance Screener writes to)
 
     const { searchParams } = new URL(request.url);
     const minSpreadBps = searchParams.get("minSpreadBps");

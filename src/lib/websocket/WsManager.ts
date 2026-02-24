@@ -16,15 +16,24 @@ export type WsManagerListener = {
   onDisconnect?: (exchange: ExchangeId) => void;
 };
 
+const WS_MANAGER_KEY = "__WS_MANAGER__";
+
 /**
  * Central manager for exchange WebSocket streams. Connects Binance and Bybit WS,
  * forwards Mark Price, Funding Rate, and User Position updates. Robust error
  * handling so malformed payloads or listener throws never crash the manager.
+ * Singleton on globalThis so API and BotController share the same instance.
  */
 export class WsManager {
   private binance = new BinanceWS();
   private bybit = new BybitWS();
   private listener: WsManagerListener = {};
+
+  static getInstance(): WsManager {
+    const g = globalThis as Record<string, unknown>;
+    if (!g[WS_MANAGER_KEY]) g[WS_MANAGER_KEY] = new WsManager();
+    return g[WS_MANAGER_KEY] as WsManager;
+  }
 
   private safeForward<T>(exchange: ExchangeId, fn: ((p: T) => void) | undefined, payload: T): void {
     if (fn == null) return;

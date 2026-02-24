@@ -70,6 +70,7 @@ export class Screener {
 
   /** Feed funding rate snapshot (from WsManager). Updates cache, store, and may emit opportunity. */
   onFundingRate(snap: FundingRateSnapshot): void {
+    console.log("Received WS data for:", snap.symbol);
     const key = cacheKey(snap.exchange, snap.symbol);
     if (!this.config.symbols.includes(snap.symbol)) return;
     payloadCache.set(key, toPayload(snap));
@@ -78,6 +79,7 @@ export class Screener {
 
   /** Feed mark price update to keep cache fresh when funding tick doesn't include mark. */
   onMarkPrice(update: MarkPriceUpdate): void {
+    console.log("Received WS data for:", update.symbol);
     const key = cacheKey(update.exchange, update.symbol);
     const existing = payloadCache.get(key);
     if (!existing || !this.config.symbols.includes(update.symbol)) return;
