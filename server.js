@@ -22,6 +22,24 @@ app.prepare().then(() => {
   createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
+      const { pathname, query } = parsedUrl;
+
+      if (pathname === "/api/live-screener") {
+        const limit = Math.min(
+          parseInt(query.limit, 10) || 20,
+          100
+        );
+        const minSpreadBps =
+          query.minSpreadBps != null ? Number(query.minSpreadBps) : undefined;
+        const screener = BotController.getInstance().getScreener();
+        const data = screener.getTopOpportunities(limit, minSpreadBps);
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.end(JSON.stringify({ data }));
+        return;
+      }
+
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error("Error handling", req.url, err);

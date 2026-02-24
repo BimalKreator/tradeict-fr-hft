@@ -55,7 +55,7 @@ export default function Home() {
 
   const fetchScreener = async (isBackgroundRefresh = false) => {
     try {
-      const res = await fetch("/api/screener?limit=20");
+      const res = await fetch("/api/live-screener?limit=20");
       if (!res.ok) throw new Error("Failed to load screener");
       const json = await res.json();
       const data = Array.isArray(json.data) ? json.data : [];
