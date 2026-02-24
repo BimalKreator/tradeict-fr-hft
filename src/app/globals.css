@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --primary: #2563eb;
+  --profit: #22c55e;
+  --loss: #ef4444;
+  --muted: #64748b;
+  --card: #1e293b;
+  --border: #334155;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --font-sans: var(--font-inter);
+}
+
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100dvh;
+}
+
+/* Dark scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 var(--background);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Ensure no horizontal scroll on any screen */
+#__next,
+main,
+[data-layout] {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
