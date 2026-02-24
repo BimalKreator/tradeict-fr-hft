@@ -50,23 +50,30 @@ function Countdown({ nextFundingTime }: { nextFundingTime: number }) {
 export default function Home() {
   const [data, setData] = useState<{ rows: ScreenerRow[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchScreener = async () => {
-      try {
-        const res = await fetch("/api/screener?limit=20");
-        if (!res.ok) throw new Error("Failed to load screener");
-        const json = await res.json();
-        setData({ rows: json.rows ?? [], total: json.total ?? 0 });
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Error loading data");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchScreener = async () => {
+    try {
+      const res = await fetch("/api/screener?limit=20");
+      if (!res.ok) throw new Error("Failed to load screener");
+      const json = await res.json();
+      setData({ rows: json.rows ?? [], total: json.total ?? 0 });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error loading data");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
+  const handleForceRefresh = () => {
+    setRefreshing(true);
+    fetchScreener();
+  };
+
+  useEffect(() => {
     fetchScreener();
     const interval = setInterval(fetchScreener, 5000);
     return () => clearInterval(interval);
@@ -75,10 +82,22 @@ export default function Home() {
   return (
     <div className="w-full max-w-[100vw] overflow-x-hidden px-4">
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">Funding screener</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Top 20 pairs by net spread (Binance − Bybit). Updates every 5s.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Funding screener</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Top 20 pairs by net spread (Binance − Bybit). Updates every 5s.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleForceRefresh}
+            disabled={refreshing || loading}
+            className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--border)] disabled:opacity-50"
+          >
+            {refreshing ? "Refreshing…" : "Force Refresh"}
+          </button>
+        </div>
 
         {loading && !data && (
           <p className="mt-4 text-sm text-[var(--muted)]">Loading…</p>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { BotController } from "@/lib/engine/BotController";
 import { getScreenerRows } from "@/lib/engine/screener-store";
 
 const DEFAULT_LIMIT = 20;
@@ -7,6 +8,8 @@ const MAX_LIMIT = 100;
 
 export async function GET(request: NextRequest) {
   try {
+    BotController.getInstance().init();
+
     const { searchParams } = new URL(request.url);
     const minSpreadBps = searchParams.get("minSpreadBps");
     const limitParam = searchParams.get("limit");
