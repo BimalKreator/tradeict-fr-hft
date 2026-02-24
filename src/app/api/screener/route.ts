@@ -42,15 +42,15 @@ export async function GET(request: NextRequest) {
       | { getTopOpportunities: (limit: number, minSpreadBps?: number) => ScreenerRow[] }
       | undefined;
 
-    let opportunities: ScreenerRow[] =
+    let inMemory: ScreenerRow[] =
       screener && typeof screener.getTopOpportunities === "function"
-        ? screener.getTopOpportunities(limit, minBps)
+        ? screener.getTopOpportunities(MAX_LIMIT, minBps)
         : [];
-
-    if (opportunities.length === 0) {
-      const fileRows = await getScreenerRowsFromFile();
-      opportunities = applyFilterSortLimit(fileRows, limit, minBps);
-    }
+    const fileRows = await getScreenerRowsFromFile();
+    const bySymbol = new Map<string, ScreenerRow>();
+    for (const row of fileRows) bySymbol.set(row.symbol, row);
+    for (const row of inMemory) bySymbol.set(row.symbol, row);
+    const opportunities = applyFilterSortLimit(Array.from(bySymbol.values()), limit, minBps);
 
     return NextResponse.json({ data: opportunities });
   } catch (e) {

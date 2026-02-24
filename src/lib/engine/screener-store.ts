@@ -6,8 +6,12 @@ import type { ScreenerRow } from "@/lib/types";
 export const ESTIMATED_FEE_BPS = 8;
 
 const STORE_KEY = "__SCREENER_STORE_ROWS__";
-const SCREENER_LIVE_FILE = path.join(process.cwd(), "data", "screener_live.json");
 const PERSIST_DEBOUNCE_MS = 400;
+
+/** Resolve at runtime so all workers/contexts use the same project path. */
+function getScreenerLiveFilePath(): string {
+  return path.join(process.cwd(), "data", "screener_live.json");
+}
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -18,12 +22,13 @@ function getStore(): Map<string, ScreenerRow> {
 }
 
 async function persistToFile(): Promise<void> {
+  const filePath = getScreenerLiveFilePath();
   try {
     const rows = Array.from(getStore().values());
-    await fs.mkdir(path.dirname(SCREENER_LIVE_FILE), { recursive: true });
-    await fs.writeFile(SCREENER_LIVE_FILE, JSON.stringify(rows), "utf8");
-  } catch {
-    // ignore write errors
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(rows), "utf8");
+  } catch (e) {
+    console.error("[screener-store] persist failed:", filePath, e);
   }
 }
 
@@ -54,8 +59,9 @@ export function clearScreenerStore(): void {
  * (Next.js can run API routes in a different worker than the one holding the WebSocket).
  */
 export async function getScreenerRowsFromFile(): Promise<ScreenerRow[]> {
+  const filePath = getScreenerLiveFilePath();
   try {
-    const raw = await fs.readFile(SCREENER_LIVE_FILE, "utf8");
+    const raw = await fs.readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
