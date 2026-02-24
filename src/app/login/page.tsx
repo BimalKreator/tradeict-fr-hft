@@ -49,8 +49,12 @@ function LoginForm() {
         <h1 className="mb-6 text-center text-xl font-semibold text-[var(--foreground)]">
           Admin login
         </h1>
-        {/* No action prop: use onSubmit + fetch only to avoid "Failed to find Server Action" */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          action={undefined}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           {error && (
             <p className="rounded-lg border border-[var(--loss)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--loss)]" role="alert">
               {error}

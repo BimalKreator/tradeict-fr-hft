@@ -30,10 +30,10 @@ export async function getAccountInfo(apiKey: string, secret: string): Promise<{ 
   return { ok: true };
 }
 
-/** Bybit v5: position list returns positionIdx. 0 = one-way, 1/2 = hedge. No GET for mode when no positions. */
+/** Bybit v5: position list returns positionIdx. 0 = one-way, 1/2 = hedge. settleCoin=USDT required for linear. */
 export async function getPositionList(apiKey: string, secret: string): Promise<{ hedgeMode: boolean | null }> {
   const timestamp = Date.now().toString();
-  const query = "category=linear";
+  const query = "category=linear&settleCoin=USDT";
   const signPayload = timestamp + apiKey + RECV_WINDOW + query;
   const signature = sign(secret, signPayload);
   const url = `${BASE}/v5/position/list?${query}`;
