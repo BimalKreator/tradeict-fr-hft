@@ -1,4 +1,5 @@
-import * as fs from "fs/promises";
+import * as fs from "fs";
+import * as fsp from "fs/promises";
 import * as path from "path";
 import type { ScreenerRow } from "@/lib/types";
 
@@ -6,7 +7,8 @@ import type { ScreenerRow } from "@/lib/types";
 export const ESTIMATED_FEE_BPS = 8;
 
 const STORE_KEY = "__SCREENER_STORE_ROWS__";
-const PERSIST_DEBOUNCE_MS = 400;
+/** Throttle: persist at most once every 2s to avoid disk thrash from high WS volume. */
+const PERSIST_THROTTLE_MS = 2000;
 
 /** Resolve at runtime so all workers/contexts use the same project path. */
 function getScreenerLiveFilePath(): string {
@@ -14,6 +16,7 @@ function getScreenerLiveFilePath(): string {
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPersistTime = 0;
 
 function getStore(): Map<string, ScreenerRow> {
   const g = globalThis as Record<string, unknown>;
@@ -24,20 +27,30 @@ function getStore(): Map<string, ScreenerRow> {
 async function persistToFile(): Promise<void> {
   const filePath = getScreenerLiveFilePath();
   try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     const rows = Array.from(getStore().values());
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(rows), "utf8");
+    await fsp.writeFile(filePath, JSON.stringify(rows), "utf8");
+    console.log("Successfully wrote to screener_live.json");
   } catch (e) {
     console.error("[screener-store] persist failed:", filePath, e);
   }
 }
 
+/** Schedules a single persist at most once every PERSIST_THROTTLE_MS. */
 function schedulePersist(): void {
-  if (persistTimer) clearTimeout(persistTimer);
+  const now = Date.now();
+  const elapsed = now - lastPersistTime;
+  if (elapsed >= PERSIST_THROTTLE_MS) {
+    lastPersistTime = now;
+    void persistToFile();
+    return;
+  }
+  if (persistTimer != null) return;
   persistTimer = setTimeout(() => {
     persistTimer = null;
+    lastPersistTime = Date.now();
     void persistToFile();
-  }, PERSIST_DEBOUNCE_MS);
+  }, PERSIST_THROTTLE_MS - elapsed);
 }
 
 /** In-memory store on globalThis; also persisted to file for cross-context (e.g. API worker) reads. */
@@ -61,7 +74,7 @@ export function clearScreenerStore(): void {
 export async function getScreenerRowsFromFile(): Promise<ScreenerRow[]> {
   const filePath = getScreenerLiveFilePath();
   try {
-    const raw = await fs.readFile(filePath, "utf8");
+    const raw = await fsp.readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
